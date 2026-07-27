@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>レトロインベーダー84 ｜ ブラウザーで遊べる無料レトロシューティング</title>
+<meta name="description" content="インストール不要・登録不要。ブラウザーだけで遊べる80年代アーケード風のドットシューティング「レトロインベーダー84」。PCはキーボード、スマホはタッチで操作できます。">
+<meta name="author" content="yhdog0425-eng">
+<meta name="theme-color" content="#05060a">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="レトロインベーダー84">
+<meta property="og:title" content="レトロインベーダー84 ｜ ブラウザーで遊べる無料レトロシューティング">
+<meta property="og:description" content="インストール不要・登録不要。ブラウザーだけで遊べる80年代アーケード風のドットシューティング。PCもスマホもOK。">
+<meta property="og:url" content="https://yhdog0425-eng.github.io/retro-invaders-84/">
+<meta property="og:image" content="https://yhdog0425-eng.github.io/retro-invaders-84/ogp.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="レトロインベーダー84">
+<meta name="twitter:description" content="ブラウザーだけで遊べる80年代アーケード風のドットシューティング。">
+<meta name="twitter:image" content="https://yhdog0425-eng.github.io/retro-invaders-84/ogp.png">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2011%208'%3E%3Cpath%20fill='%238dff9e'%20d='M2,0h1v1h-1zM8,0h1v1h-1zM3,1h1v1h-1zM7,1h1v1h-1zM2,2h7v1h-7zM1,3h2v1h-2zM4,3h3v1h-3zM8,3h2v1h-2zM0,4h11v1h-11zM0,5h1v1h-1zM2,5h7v1h-7zM10,5h1v1h-1zM0,6h1v1h-1zM2,6h1v1h-1zM8,6h1v1h-1zM10,6h1v1h-1zM3,7h2v1h-2zM6,7h2v1h-2z'/%3E%3C/svg%3E">
+
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #05060a;
+    color: #e8f7e8;
+    font-family: "Courier New", Consolas, monospace;
+    overflow: hidden;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #wrap {
+    height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px;
+    padding: 10px;
+  }
+  #stage { position: relative; max-width: 100%; max-height: 100%; }
+  canvas {
+    display: block;
+    background: #000;
+    border: 2px solid #1d4d2b;
+    border-radius: 4px;
+    box-shadow: 0 0 24px rgba(0, 255, 120, 0.15), inset 0 0 60px rgba(0, 255, 120, 0.04);
+    max-width: 100%;
+    max-height: calc(100vh - 120px);
+    image-rendering: pixelated;
+  }
+  #overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 14px; text-align: center;
+    background: rgba(0, 0, 0, 0.80);
+    border-radius: 4px;
+  }
+  #overlay.hidden { display: none; }
+  #overlay h1 {
+    margin: 0;
+    font-size: clamp(20px, 4.4vw, 36px);
+    letter-spacing: 4px;
+    color: #6cff8e;
+    text-shadow: 0 0 12px rgba(108, 255, 142, 0.6);
+  }
+  #overlay p { margin: 0; font-size: clamp(12px, 2.6vw, 15px); line-height: 1.9; color: #b6d8bd; }
+  #overlay .key { color: #ffe066; }
+  #overlay .url { font-size: 11px; color: #4d6b55; letter-spacing: 0.5px; word-break: break-all; }
+  button.btn {
+    margin-top: 6px; padding: 12px 28px;
+    font: inherit; font-size: 16px; letter-spacing: 2px;
+    color: #05060a; background: #6cff8e;
+    border: none; border-radius: 3px; cursor: pointer;
+  }
+  button.btn:hover { background: #9dffb6; }
+  #touch { display: none; width: 100%; max-width: 640px; gap: 10px; }
+  #touch button {
+    flex: 1; padding: 18px 0;
+    font: inherit; font-size: 20px;
+    color: #cdebd4; background: #10221a;
+    border: 1px solid #2c6b3f; border-radius: 6px;
+  }
+  #touch button:active { background: #1d4d2b; }
+  #touch #fire { flex: 1.4; color: #ffe066; }
+  @media (hover: none) and (pointer: coarse) { #touch { display: flex; } }
+  #hint { font-size: 11px; color: #4d6b55; letter-spacing: 1px; text-align: center; }
+
+  /* 録画モード（?rec=1）：周辺UIを消して画面を最大化 */
+  body.rec #hint, body.rec #touch { display: none !important; }
+  body.rec #wrap { padding: 0; gap: 0; }
+  body.rec canvas { border: none; border-radius: 0; max-height: 100vh; box-shadow: none; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage">
+    <canvas id="cv" width="640" height="720"></canvas>
+    <div id="overlay">
+      <h1 id="ov-title">RETRO INVADERS 84</h1>
+      <p id="ov-text"></p>
+      <button class="btn" id="ov-btn">スタート</button>
+      <p class="url">https://yhdog0425-eng.github.io/retro-invaders-84/</p>
+    </div>
+  </div>
+  <div id="touch">
+    <button id="left">◀</button>
+    <button id="fire">撃つ</button>
+    <button id="right">▶</button>
+  </div>
+  <div id="hint">← → 移動 ／ SPACE 発射 ／ P 一時停止 ／ M 音のON・OFF</div>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+const PARAMS   = new URLSearchParams(location.search);
+const REC_MODE = PARAMS.get("rec") === "1";
+const PLAY_URL = "https://yhdog0425-eng.github.io/retro-invaders-84/";
+if (REC_MODE) document.body.classList.add("rec");
+
+const cv  = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+const W = cv.width, H = cv.height;
+
+const overlay = document.getElementById("overlay");
+const ovTitle = document.getElementById("ov-title");
+const ovText  = document.getElementById("ov-text");
+const ovBtn   = document.getElementById("ov-btn");
+
+/* ===== ドット絵定義（#=描画） ===== */
+const S = (rows) => rows.map(r => r.split("").map(c => c === "#" ? 1 : 0));
+
+const SPRITES = {
+  crab: [
+    S(["..#.....#..",
+       "...#...#...",
+       "..#######..",
+       ".##.###.##.",
+       "###########",
+       "#.#######.#",
+       "#.#.....#.#",
+       "...##.##..."]),
+    S(["..#.....#..",
+       "#..#...#..#",
+       "#.#######.#",
+       "###.###.###",
+       "###########",
+       ".#########.",
+       "..#.....#..",
+       ".#.......#."]),
+  ],
+  squid: [
+    S(["....##....",
+       "...####...",
+       "..######..",
+       ".##.##.##.",
+       "..######..",
+       "....##....",
+       "...#..#...",
+       "..#....#.."]),
+    S(["....##....",
+       "...####...",
+       "..######..",
+       ".##.##.##.",
+       "..######..",
+       "...#..#...",
+       "..#.##.#..",
+       "...#..#..."]),
+  ],
+  octo: [
+    S([".....##.....",
+       "...######...",
+       "..########..",
+       ".##.####.##.",
+       "############",
+       "..###..###..",
+       ".##......##.",
+       "..##....##.."]),
+    S([".....##.....",
+       "...######...",
+       "..########..",
+       ".##.####.##.",
+       "############",
+       "...##..##...",
+       "..##.##.##..",
+       "##........##"]),
+  ],
+  player: S([".....#.....",
+             "....###....",
+             "....###....",
+             "###########",
+             "###########",
+             "###########",
+             "###########",
+             "##.......##"]),
+  ufo: S(["....#######....",
+          "..###########..",
+          ".#############.",
+          "##.##.###.##.##",
+          "###############",
+          "..###.....###..",
+          "...#.......#..."]),
+  boom: S(["#..#.....#..#",
+           ".#..#...#..#.",
+           "..#.......#..",
+           "#...#####...#",
+           "...#######...",
+           "#...#####...#",
+           "..#.......#..",
+           ".#..#...#..#."]),
+};
+
+/* ===== サウンド（WebAudioで合成・外部音源なし） ===== */
+let ac = null, muted = false;
+function audio() {
+  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { muted = true; } }
+  if (ac && ac.state === "suspended") ac.resume();
+  return ac;
+}
+function beep(freq, dur, type = "square", vol = 0.06, slide = 0) {
+  if (muted) return;
+  const a = audio(); if (!a) return;
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, a.currentTime);
+  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, freq + slide), a.currentTime + dur);
+  g.gain.setValueAtTime(vol, a.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+  o.connect(g); g.connect(a.destination);
+  o.start(); o.stop(a.currentTime + dur);
+}
+function noise(dur, vol = 0.08) {
+  if (muted) return;
+  const a = audio(); if (!a) return;
+  const len = Math.floor(a.sampleRate * dur);
+  const buf = a.createBuffer(1, len, a.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const src = a.createBufferSource(), g = a.createGain();
+  src.buffer = buf; g.gain.value = vol;
+  src.connect(g); g.connect(a.destination); src.start();
+}
+const SFX = {
+  shoot:     () => beep(880, 0.10, "square", 0.05, -600),
+  hit:       () => noise(0.18, 0.10),
+  playerDie: () => { noise(0.45, 0.14); beep(220, 0.5, "sawtooth", 0.07, -180); },
+  ufo:       () => beep(1200, 0.06, "sine", 0.04, -300),
+  step:      (i) => beep([110, 98, 87, 78][i % 4], 0.09, "square", 0.045),
+  level:     () => { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.14, "square", 0.05), i * 90)); },
+};
+
+/* ===== ゲーム定数 ===== */
+const COLS = 11, ROWS = 5;
+const CELL_W = 44, CELL_H = 38;
+const GRID_LEFT = 60, GRID_TOP = 110;
+const PX = 3;
+const PLAYER_Y = H - 70;
+const PLAYER_SPEED = 5;
+const BULLET_SPEED = 11;
+const BOMB_SPEED = 4;
+const FLOOR_Y = H - 40;
+const ATTRACT_FRAMES = 20 * 60;   // タイトル20秒放置で自動デモ
+
+const ROW_TYPE  = ["octo", "squid", "squid", "crab", "crab"];
+const ROW_SCORE = [30, 20, 20, 10, 10];
+const ROW_COLOR = ["#ff6b8b", "#7bd6ff", "#7bd6ff", "#8dff9e", "#8dff9e"];
+
+/* ===== 状態 ===== */
+let state = "title";   // title | playing | paused | dead | levelclear | gameover
+let score = 0, hiScore = Number(localStorage.getItem("invaders_hi") || 0);
+let lives = 3, level = 1;
+let player, invaders, bullets, bombs, shields, ufo, booms;
+let dir, moveTimer, moveInterval, stepIdx, ufoTimer, deadTimer, clearTimer;
+let frame = 0, idleFrames = 0;
+let demoMode = false, demoRestart = 0, demoBlocked = 0;
+const keys = Object.create(null);
+
+function makeInvaders() {
+  const arr = [];
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const type = ROW_TYPE[r];
+      const sp = SPRITES[type][0];
+      arr.push({
+        row: r, col: c, alive: true, type,
+        w: sp[0].length * PX, h: sp.length * PX,
+        x: GRID_LEFT + c * CELL_W,
+        y: GRID_TOP + r * CELL_H,
+      });
+    }
+  }
+  return arr;
+}
+
+function makeShields() {
+  const SHAPE = [
+    "..#########..",
+    ".###########.",
+    "#############",
+    "#############",
+    "#############",
+    "####.....####",
+    "###.......###",
+    "##.........##",
+  ];
+  const BS = 5;
+  const shieldW = SHAPE[0].length * BS;
+  const count = 4;
+  const gap = (W - count * shieldW) / (count + 1);
+  const list = [];
+  for (let i = 0; i < count; i++) {
+    const ox = gap + i * (shieldW + gap);
+    const oy = PLAYER_Y - 105;
+    const blocks = [];
+    for (let y = 0; y < SHAPE.length; y++) {
+      for (let x = 0; x < SHAPE[y].length; x++) {
+        if (SHAPE[y][x] === "#") blocks.push({ x: ox + x * BS, y: oy + y * BS, s: BS, hp: 3 });
+      }
+    }
+    list.push(blocks);
+  }
+  return list;
+}
+
+function resetLevel() {
+  invaders = makeInvaders();
+  bullets = []; bombs = []; booms = []; ufo = null;
+  shields = makeShields();
+  dir = 1;
+  moveInterval = Math.max(9, 34 - (level - 1) * 4);
+  moveTimer = 0; stepIdx = 0;
+  ufoTimer = 700 + Math.random() * 700;
+  player = { x: W / 2 - 16, y: PLAYER_Y, w: SPRITES.player[0].length * PX, h: SPRITES.player.length * PX, cool: 0, dead: 0 };
+}
+
+function startGame(demo) {
+  demoMode = !!demo;
+  score = 0; lives = 3; level = 1;
+  idleFrames = 0;
+  demoBlocked = 0;
+  // デモAIが立てたままの入力が残らないようクリアする
+  keys.left = keys.right = keys.fire = false;
+  resetLevel();
+  state = "playing";
+  hideOverlay();
+}
+
+/* ===== 描画ヘルパ ===== */
+function drawSprite(sp, x, y, color, px = PX) {
+  ctx.fillStyle = color;
+  for (let r = 0; r < sp.length; r++) {
+    const row = sp[r];
+    for (let c = 0; c < row.length; c++) {
+      if (row[c]) ctx.fillRect(x + c * px, y + r * px, px, px);
+    }
+  }
+}
+function rectHit(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+function aliveInvaders() { return invaders.filter(i => i.alive); }
+
+/* ===== デモAI（?demo=1 とアトラクトモードで使用） =====
+   ゲーム本体には一切手を入れず、keys を書き換えるだけで自動操作する */
+function shieldAbove(x) {
+  for (const blocks of shields) {
+    for (const bl of blocks) {
+      if (x >= bl.x - 3 && x <= bl.x + bl.s + 3 && bl.y < player.y) return true;
+    }
+  }
+  return false;
+}
+
+function demoThink() {
+  keys.left = keys.right = keys.fire = false;
+  if (state !== "playing" || player.dead) return;
+  const px = player.x + player.w / 2;
+
+  // 1) 回避：頭上に迫る爆弾から逃げる
+  let danger = null, dmin = 1e9;
+  for (const b of bombs) {
+    const dx = Math.abs(b.x + b.w / 2 - px);
+    const dy = player.y - b.y;
+    if (dy > -12 && dy < 240 && dx < 30 && dy < dmin) { dmin = dy; danger = b; }
+  }
+  if (danger) {
+    let away = (danger.x + danger.w / 2) < px ? 1 : -1;
+    if (px + away * 70 < 24 || px + away * 70 > W - 24) away *= -1;
+    keys[away > 0 ? "right" : "left"] = true;
+    return;
+  }
+
+  // 2) 狙う相手：UFO優先、次に最下段で最も近いインベーダー
+  let tx = null;
+  if (ufo) {
+    tx = ufo.x + ufo.w / 2 + ufo.vx * 14;   // 弾の到達時間ぶん先読み
+  } else {
+    let best = null;
+    for (const iv of invaders) {
+      if (!iv.alive) continue;
+      const d = Math.abs(iv.x + iv.w / 2 - px) + (ROWS - iv.row) * 30;
+      if (!best || d < best.d) best = { d, iv };
+    }
+    if (best) tx = best.iv.x + best.iv.w / 2 + dir * 20;
+  }
+  if (tx === null) return;
+
+  const diff = tx - px;
+  if (diff < -6) { keys.left = true; return; }
+  if (diff > 6)  { keys.right = true; return; }
+
+  // 照準が合った。真上が自陣シールドなら隙間へずれる
+  if (shieldAbove(px) && demoBlocked < 90) {
+    demoBlocked++;
+    keys[Math.floor(frame / 40) % 2 ? "left" : "right"] = true;
+    return;
+  }
+  // 90フレーム動いても隙間が見つからなければ、シールドごと撃ち抜く
+  demoBlocked = 0;
+  keys.fire = true;
+}
+
+/* ===== 更新 ===== */
+function update() {
+  frame++;
+  booms = booms.filter(b => (b.t-- > 0));
+
+  if (state === "title") {
+    if (++idleFrames > ATTRACT_FRAMES) startGame(true);
+    return;
+  }
+  if (state === "gameover") {
+    if (demoMode && --demoRestart <= 0) startGame(true);
+    return;
+  }
+  if (state === "dead") {
+    if (--deadTimer <= 0) {
+      if (lives <= 0) { gameOver(); }
+      else {
+        bullets = []; bombs = [];
+        player.dead = 0;
+        player.x = W / 2 - player.w / 2;
+        state = "playing";
+      }
+    }
+    return;
+  }
+  if (state === "levelclear") {
+    if (--clearTimer <= 0) { level++; resetLevel(); state = "playing"; }
+    return;
+  }
+  if (state !== "playing") return;
+
+  if (demoMode) demoThink();
+
+  /* --- 自機 --- */
+  if (keys.left)  player.x -= PLAYER_SPEED;
+  if (keys.right) player.x += PLAYER_SPEED;
+  player.x = Math.max(14, Math.min(W - 14 - player.w, player.x));
+  if (player.cool > 0) player.cool--;
+  if (keys.fire && player.cool === 0 && bullets.length < 1 + Math.floor(level / 4)) {
+    bullets.push({ x: player.x + player.w / 2 - 1.5, y: player.y - 10, w: 3, h: 12 });
+    player.cool = 14;
+    SFX.shoot();
+  }
+
+  /* --- インベーダー移動 --- */
+  const live = aliveInvaders();
+  const total = live.length;
+  const speedUp = Math.max(2, Math.round(moveInterval * (total / (COLS * ROWS))));
+  if (++moveTimer >= speedUp) {
+    moveTimer = 0;
+    let minX = Infinity, maxX = -Infinity;
+    for (const iv of live) { minX = Math.min(minX, iv.x); maxX = Math.max(maxX, iv.x + iv.w); }
+    let drop = false;
+    if (dir > 0 && maxX + 12 >= W - 14) drop = true;
+    if (dir < 0 && minX - 12 <= 14) drop = true;
+    if (drop) { dir *= -1; for (const iv of live) iv.y += 18; }
+    else      { for (const iv of live) iv.x += 12 * dir; }
+    SFX.step(stepIdx++);
+
+    for (const iv of live) {
+      if (iv.y + iv.h >= FLOOR_Y - 8) { lives = 0; killPlayer(); return; }
+    }
+  }
+
+  /* --- インベーダーの爆弾 --- */
+  const bombRate = 0.012 + level * 0.004 + (1 - total / (COLS * ROWS)) * 0.02;
+  if (live.length && Math.random() < bombRate && bombs.length < 3 + level) {
+    const bottoms = {};
+    for (const iv of live) {
+      if (!bottoms[iv.col] || iv.y > bottoms[iv.col].y) bottoms[iv.col] = iv;
+    }
+    const arr = Object.values(bottoms);
+    const src = arr[Math.floor(Math.random() * arr.length)];
+    bombs.push({ x: src.x + src.w / 2 - 1.5, y: src.y + src.h, w: 3, h: 12, ph: 0 });
+  }
+
+  /* --- UFO --- */
+  if (!ufo && --ufoTimer <= 0) {
+    const fromLeft = Math.random() < 0.5;
+    ufo = {
+      x: fromLeft ? -40 : W + 10, y: 60,
+      w: SPRITES.ufo[0].length * PX, h: SPRITES.ufo.length * PX,
+      vx: fromLeft ? 2.2 : -2.2,
+    };
+    ufoTimer = 900 + Math.random() * 900;
+  }
+  if (ufo) {
+    ufo.x += ufo.vx;
+    if (frame % 8 === 0) SFX.ufo();
+    if (ufo.x < -80 || ufo.x > W + 80) ufo = null;
+  }
+
+  /* --- 弾の移動と当たり判定 --- */
+  for (const b of bullets) b.y -= BULLET_SPEED;
+  for (const b of bombs) { b.y += BOMB_SPEED; b.ph++; }
+
+  bullets = bullets.filter(b => {
+    if (b.y + b.h < 30) return false;
+    if (ufo && rectHit(b, ufo)) {
+      const pts = [50, 100, 150, 200, 300][Math.floor(Math.random() * 5)];
+      addScore(pts);
+      booms.push({ x: ufo.x + ufo.w / 2 - 20, y: ufo.y, t: 22, color: "#ffe066", label: String(pts) });
+      ufo = null; SFX.hit();
+      return false;
+    }
+    for (const iv of invaders) {
+      if (iv.alive && rectHit(b, iv)) {
+        iv.alive = false;
+        addScore(ROW_SCORE[iv.row]);
+        booms.push({ x: iv.x, y: iv.y, t: 14, color: ROW_COLOR[iv.row] });
+        SFX.hit();
+        return false;
+      }
+    }
+    if (hitShield(b)) return false;
+    return true;
+  });
+
+  bombs = bombs.filter(b => {
+    if (b.y > FLOOR_Y) return false;
+    if (hitShield(b)) return false;
+    if (!player.dead && rectHit(b, player)) { killPlayer(); return false; }
+    for (let i = 0; i < bullets.length; i++) {
+      if (rectHit(b, bullets[i])) {
+        booms.push({ x: b.x - 16, y: b.y - 12, t: 10, color: "#cccccc" });
+        bullets.splice(i, 1);
+        return false;
+      }
+    }
+    return true;
+  });
+
+  if (aliveInvaders().length === 0) {
+    state = "levelclear";
+    clearTimer = 110;
+    SFX.level();
+  }
+}
+
+function hitShield(b) {
+  for (const blocks of shields) {
+    for (let i = 0; i < blocks.length; i++) {
+      const bl = blocks[i];
+      if (b.x < bl.x + bl.s && b.x + b.w > bl.x && b.y < bl.y + bl.s && b.y + b.h > bl.y) {
+        for (let j = blocks.length - 1; j >= 0; j--) {
+          const o = blocks[j];
+          if (Math.abs(o.x - bl.x) <= 5 && Math.abs(o.y - bl.y) <= 5) {
+            if (--o.hp <= 0) blocks.splice(j, 1);
+          }
+        }
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function addScore(p) {
+  score += p;
+  // デモAIのスコアはハイスコアに記録しない
+  if (!demoMode && score > hiScore) {
+    hiScore = score;
+    localStorage.setItem("invaders_hi", String(hiScore));
+  }
+}
+
+function killPlayer() {
+  lives--;
+  player.dead = 1;
+  booms.push({ x: player.x - 4, y: player.y - 4, t: 40, color: "#ff6b8b" });
+  SFX.playerDie();
+  state = "dead";
+  deadTimer = 90;
+}
+
+function gameOver() {
+  state = "gameover";
+  if (demoMode) { demoRestart = 150; return; }
+  showOverlay("GAME OVER",
+    `スコア <span class="key">${score}</span> ／ ハイスコア <span class="key">${hiScore}</span><br>` +
+    `到達レベル <span class="key">${level}</span><br><br>` +
+    `面白かったら友だちにもURLをシェアしてください`,
+    "もう一度あそぶ");
+}
+
+/* ===== 描画 ===== */
+function draw() {
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = "rgba(255,255,255,0.10)";
+  for (let i = 0; i < 40; i++) {
+    const x = (i * 137.5) % W, y = (i * 71.3) % (H - 120) + 30;
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  // HUD
+  ctx.font = "16px 'Courier New', monospace";
+  ctx.fillStyle = "#8dff9e"; ctx.textAlign = "left";
+  ctx.fillText("SCORE " + String(score).padStart(5, "0"), 16, 24);
+  ctx.fillStyle = "#ffe066"; ctx.textAlign = "center";
+  ctx.fillText("HI " + String(hiScore).padStart(5, "0"), W / 2, 24);
+  ctx.fillStyle = "#7bd6ff"; ctx.textAlign = "right";
+  ctx.fillText("LEVEL " + level, W - 16, 24);
+
+  ctx.textAlign = "left";
+  for (let i = 0; i < Math.max(0, lives); i++) {
+    drawSprite(SPRITES.player, 16 + i * 34, H - 26, "#8dff9e", 2);
+  }
+  if (!REC_MODE) {
+    ctx.fillStyle = "#4d6b55"; ctx.textAlign = "right";
+    ctx.font = "12px 'Courier New', monospace";
+    ctx.fillText(muted ? "MUTE (M)" : "SOUND (M)", W - 16, H - 14);
+  }
+
+  ctx.fillStyle = "#2c6b3f";
+  ctx.fillRect(0, FLOOR_Y, W, 2);
+
+  for (const blocks of shields) {
+    for (const bl of blocks) {
+      ctx.fillStyle = bl.hp >= 3 ? "#3ddc6a" : bl.hp === 2 ? "#2ba34e" : "#1c6b34";
+      ctx.fillRect(bl.x, bl.y, bl.s, bl.s);
+    }
+  }
+
+  const anim = Math.floor(frame / 20) % 2;
+  for (const iv of invaders) {
+    if (!iv.alive) continue;
+    drawSprite(SPRITES[iv.type][anim], iv.x, iv.y, ROW_COLOR[iv.row]);
+  }
+
+  if (ufo) drawSprite(SPRITES.ufo, ufo.x, ufo.y, "#ff6b8b");
+
+  ctx.fillStyle = "#ffffff";
+  for (const b of bullets) ctx.fillRect(b.x, b.y, b.w, b.h);
+  for (const b of bombs) {
+    ctx.fillStyle = "#ffb3c1";
+    const wob = Math.sin(b.ph * 0.4) * 2;
+    ctx.fillRect(b.x + wob, b.y, b.w, b.h);
+  }
+
+  if (!player.dead) {
+    drawSprite(SPRITES.player, player.x, player.y, "#8dff9e");
+  } else if (Math.floor(frame / 4) % 2) {
+    drawSprite(SPRITES.boom, player.x - 4, player.y - 4, "#ff6b8b");
+  }
+
+  for (const b of booms) {
+    if (b.label) {
+      ctx.fillStyle = b.color;
+      ctx.font = "18px 'Courier New', monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(b.label, b.x + 20, b.y + 16);
+    } else {
+      drawSprite(SPRITES.boom, b.x, b.y, b.color, 2);
+    }
+  }
+
+  // デモ中の表示（録画モードでは非表示にして画面をすっきりさせる）
+  if (demoMode && !REC_MODE && state !== "gameover" && Math.floor(frame / 30) % 2) {
+    ctx.fillStyle = "#ffe066";
+    ctx.font = "15px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("- DEMO PLAY -", W / 2, 52);
+  }
+  if (demoMode && !REC_MODE) {
+    ctx.fillStyle = "#4d6b55";
+    ctx.font = "12px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("SPACE / 画面タップで自分でプレイ", W / 2, H - 14);
+  }
+
+  if (state === "levelclear") {
+    ctx.fillStyle = "#ffe066";
+    ctx.font = "28px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("LEVEL " + level + " CLEAR!", W / 2, H / 2);
+  }
+  if (state === "gameover" && demoMode) {
+    ctx.fillStyle = "#ff6b8b";
+    ctx.font = "26px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("GAME OVER", W / 2, H / 2);
+  }
+  if (state === "paused") {
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#6cff8e";
+    ctx.font = "30px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("PAUSE", W / 2, H / 2);
+    ctx.font = "14px 'Courier New', monospace";
+    ctx.fillText("P キーで再開", W / 2, H / 2 + 30);
+  }
+}
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+
+/* ===== オーバーレイ ===== */
+function showOverlay(title, html, btn) {
+  ovTitle.textContent = title;
+  ovText.innerHTML = html;
+  ovBtn.textContent = btn;
+  overlay.classList.remove("hidden");
+}
+function hideOverlay() { overlay.classList.add("hidden"); }
+
+showOverlay("RETRO INVADERS 84",
+  '<span class="key">←</span> <span class="key">→</span> で移動 ／ <span class="key">SPACE</span> で発射<br>' +
+  '<span class="key">P</span> 一時停止 ／ <span class="key">M</span> 音のON・OFF<br>' +
+  'スマホは画面下のボタンで操作<br><br>' +
+  'ピンクのUFOは <span class="key">50〜300点</span>！<br>' +
+  '緑のシールドは撃つと自分も削ってしまいます',
+  "スタート");
+
+ovBtn.addEventListener("click", () => { audio(); startGame(false); });
+
+/* ===== 入力 ===== */
+const keyMap = {
+  ArrowLeft: "left", ArrowRight: "right",
+  a: "left", d: "right", A: "left", D: "right",
+  " ": "fire", Spacebar: "fire",
+};
+function userTakeOver() {
+  audio();
+  if (state === "title" || demoMode || state === "gameover") { startGame(false); return true; }
+  return false;
+}
+window.addEventListener("keydown", (e) => {
+  if (e.key === " " || e.key.startsWith("Arrow")) e.preventDefault();
+  idleFrames = 0;
+  if ((e.key === " " || e.key === "Enter" || e.key.startsWith("Arrow")) && (state === "title" || demoMode || state === "gameover")) {
+    userTakeOver();
+    return;
+  }
+  const k = keyMap[e.key];
+  if (k) keys[k] = true;
+  if (e.key === "p" || e.key === "P") {
+    if (state === "playing") state = "paused";
+    else if (state === "paused") state = "playing";
+  }
+  if (e.key === "m" || e.key === "M") muted = !muted;
+});
+window.addEventListener("keyup", (e) => {
+  const k = keyMap[e.key];
+  if (k) keys[k] = false;
+});
+window.addEventListener("blur", () => { keys.left = keys.right = keys.fire = false; });
+
+// デモ中に画面をタップしたら自分でプレイ開始。
+// ただし録画モードでは、効果音を鳴らすためのクリックでデモが止まらないようにする。
+cv.addEventListener("pointerdown", () => {
+  audio();
+  if (demoMode && !REC_MODE) userTakeOver();
+});
+
+// タッチ操作
+function bindTouch(id, key) {
+  const el = document.getElementById(id);
+  const on  = (e) => { e.preventDefault(); if (userTakeOver()) return; keys[key] = true; };
+  const off = (e) => { e.preventDefault(); keys[key] = false; };
+  el.addEventListener("touchstart", on, { passive: false });
+  el.addEventListener("touchend", off, { passive: false });
+  el.addEventListener("touchcancel", off, { passive: false });
+  el.addEventListener("mousedown", on);
+  el.addEventListener("mouseup", off);
+  el.addEventListener("mouseleave", off);
+}
+bindTouch("left", "left");
+bindTouch("right", "right");
+bindTouch("fire", "fire");
+
+/* ===== 起動 ===== */
+resetLevel();
+if (PARAMS.get("demo") === "1") { startGame(true); }
+loop();
+})();
+</script>
+</body>
+</html>

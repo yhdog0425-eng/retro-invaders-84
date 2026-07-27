@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>レトロインベーダー84 ｜ ショート収録用フレーム（1080x1920）</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #000; overflow: hidden;
+    font-family: "Courier New", Consolas, monospace;
+    -webkit-user-select: none; user-select: none;
+  }
+  /* 1080x1920 の実寸ステージを作り、画面サイズに合わせて縮小表示する。
+     録画時はブラウザーを F11 で全画面にすれば、この枠がそのまま縦動画になる。 */
+  #shorts {
+    position: absolute; top: 50%; left: 50%;
+    width: 1080px; height: 1920px;
+    transform-origin: center center;
+    background: radial-gradient(ellipse at 50% 30%, #0b1f14 0%, #05060a 70%);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* --- 上部タイトル --- */
+  #head { flex: 0 0 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+  #head .badge {
+    font-size: 30px; letter-spacing: 6px; color: #05060a;
+    background: #ffe066; padding: 8px 26px; border-radius: 4px;
+  }
+  #head h1 {
+    margin: 0; font-size: 84px; letter-spacing: 6px; color: #6cff8e;
+    text-shadow: 0 0 30px rgba(108,255,142,.55), 0 0 6px rgba(108,255,142,.9);
+  }
+  #head h2 { margin: 0; font-size: 34px; letter-spacing: 3px; color: #b6d8bd; font-weight: normal; }
+
+  /* --- 中央のゲーム画面 --- */
+  #game { flex: 1 1 auto; position: relative; display: flex; align-items: center; justify-content: center; }
+  #game iframe {
+    width: 1040px; height: 1170px;   /* 640x720 と同じ比率 */
+    border: 4px solid #1d4d2b; border-radius: 8px;
+    box-shadow: 0 0 60px rgba(0,255,120,.20);
+    background: #000;
+  }
+
+  /* --- 下部URL帯 --- */
+  #foot { flex: 0 0 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+  #foot .cta { font-size: 40px; letter-spacing: 3px; color: #ffe066; }
+  #foot .url {
+    font-size: 30px; letter-spacing: 1px; color: #05060a;
+    background: #6cff8e; padding: 14px 30px; border-radius: 6px;
+  }
+  #foot .note { font-size: 26px; color: #4d6b55; letter-spacing: 2px; }
+
+  /* 画面右下の操作パネル（録画には写らないよう、収録時は H キーで隠す） */
+  #panel {
+    position: fixed; right: 12px; bottom: 12px; z-index: 10;
+    background: rgba(0,0,0,.85); border: 1px solid #2c6b3f; border-radius: 6px;
+    padding: 10px 14px; color: #b6d8bd; font-size: 12px; line-height: 1.8;
+  }
+  #panel.hidden { display: none; }
+  #panel b { color: #ffe066; }
+</style>
+</head>
+<body>
+
+<div id="shorts">
+  <div id="head">
+    <div class="badge">無料・インストール不要</div>
+    <h1>レトロインベーダー84</h1>
+    <h2>ブラウザーだけで遊べる</h2>
+  </div>
+  <div id="game">
+    <iframe id="frame" src="index.html?demo=1&rec=1" title="ゲーム画面"></iframe>
+  </div>
+  <div id="foot">
+    <div class="cta">▼ 今すぐあそぶ ▼</div>
+    <div class="url">yhdog0425-eng.github.io/retro-invaders-84/</div>
+    <div class="note">PC も スマホ も OK</div>
+  </div>
+</div>
+
+<div id="panel">
+  <b>ショート収録用フレーム（1080×1920）</b><br>
+  F11 で全画面 → <b>Win + Alt + R</b> で録画開始<br>
+  <b>H</b> キー：このパネルを隠す／表示<br>
+  <b>R</b> キー：ゲームを最初からやり直す
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const stage = document.getElementById("shorts");
+  const panel = document.getElementById("panel");
+  const frame = document.getElementById("frame");
+
+  // 1080x1920 のステージを、ウィンドウに収まるよう等倍縮小して中央に置く
+  function fit() {
+    const s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920);
+    stage.style.transform = `translate(-50%, -50%) scale(${s})`;
+  }
+  window.addEventListener("resize", fit);
+  fit();
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "h" || e.key === "H") panel.classList.toggle("hidden");
+    if (e.key === "r" || e.key === "R") frame.src = frame.src;
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>サムネイル生成ツール ｜ レトロインベーダー84</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    background: #0b0f10; color: #cdebd4;
+    font-family: "Yu Gothic UI", Meiryo, system-ui, sans-serif;
+  }
+  h1 { font-size: 18px; letter-spacing: 2px; color: #6cff8e; margin: 0 0 4px; }
+  p.lead { font-size: 13px; color: #7d9c86; margin: 0 0 20px; line-height: 1.8; }
+  .panel {
+    display: flex; flex-wrap: wrap; gap: 20px;
+    align-items: flex-start;
+  }
+  .controls {
+    flex: 0 0 320px;
+    background: #10221a; border: 1px solid #2c6b3f; border-radius: 8px;
+    padding: 16px; display: flex; flex-direction: column; gap: 12px;
+  }
+  label { font-size: 12px; color: #9cc4a7; display: block; margin-bottom: 4px; }
+  input[type=text] {
+    width: 100%; padding: 8px 10px;
+    background: #05100b; color: #e8f7e8;
+    border: 1px solid #2c6b3f; border-radius: 4px;
+    font: inherit; font-size: 13px;
+  }
+  .sizes { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sizes button {
+    flex: 1 1 auto; padding: 8px 6px;
+    background: #05100b; color: #cdebd4;
+    border: 1px solid #2c6b3f; border-radius: 4px;
+    font: inherit; font-size: 12px; cursor: pointer;
+  }
+  .sizes button.on { background: #6cff8e; color: #05060a; border-color: #6cff8e; font-weight: bold; }
+  button.dl {
+    padding: 12px; font: inherit; font-size: 15px; font-weight: bold;
+    background: #ffe066; color: #05060a;
+    border: none; border-radius: 4px; cursor: pointer;
+  }
+  button.dl:hover { background: #fff0a0; }
+  .preview { flex: 1 1 480px; min-width: 300px; }
+  canvas {
+    width: 100%; height: auto; max-height: 78vh;
+    object-fit: contain; background: #000;
+    border: 1px solid #2c6b3f; border-radius: 6px;
+  }
+  .hint { font-size: 11px; color: #5f7d68; line-height: 1.8; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<h1>サムネイル生成ツール</h1>
+<p class="lead">
+  文字を書き換えて「PNGをダウンロード」を押すだけで、YouTube用のサムネイル画像が保存できます。<br>
+  同じ画像は <code>generate-thumbnails.ps1</code> でも一括生成できます（そちらは PowerShell で実行）。
+</p>
+
+<div class="panel">
+  <div class="controls">
+    <div>
+      <label>サイズ</label>
+      <div class="sizes" id="sizes"></div>
+    </div>
+    <div><label>メインタイトル</label><input type="text" id="t1" value="レトロインベーダー84"></div>
+    <div><label>サブタイトル</label><input type="text" id="t2" value="ブラウザーで遊べる無料シューティング"></div>
+    <div><label>バッジ（黄色い帯）</label><input type="text" id="t3" value="インストール不要・登録不要"></div>
+    <div><label>URL</label><input type="text" id="t4" value="yhdog0425-eng.github.io/retro-invaders-84/"></div>
+    <div><label>下部キャッチ（縦のみ表示）</label><input type="text" id="t5" value="PC も スマホ も 無料であそべる"></div>
+    <button class="dl" id="dl">PNGをダウンロード</button>
+    <div class="hint">
+      ・YouTube通常動画 → 1280×720<br>
+      ・YouTubeショートのカバー → 1080×1920<br>
+      ・SNS共有（OGP） → 1200×630
+    </div>
+  </div>
+
+  <div class="preview">
+    <canvas id="cv" width="1280" height="720"></canvas>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+const SIZES = [
+  { key: "wide",   label: "1280×720",  w: 1280, h: 720,  layout: "landscape", file: "thumbnail-wide.png" },
+  { key: "shorts", label: "1080×1920", w: 1080, h: 1920, layout: "portrait",  file: "thumbnail-shorts.png" },
+  { key: "ogp",    label: "1200×630",  w: 1200, h: 630,  layout: "landscape", file: "ogp.png" },
+];
+let current = SIZES[0];
+
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+
+const C = {
+  green:  "#8dff9e",
+  greenD: "#6cff8e",
+  blue:   "#7bd6ff",
+  pink:   "#ff6b8b",
+  yellow: "#ffe066",
+  ink:    "#05060a",
+  gray:   "#96bea0",
+};
+
+const SP = {
+  octo: [".....##.....","...######...","..########..",".##.####.##.","############","..###..###..",".##......##.","..##....##.."],
+  squid: ["....##....","...####...","..######..",".##.##.##.","..######..","....##....","...#..#...","..#....#.."],
+  crab: ["..#.....#..","...#...#...","..#######..",".##.###.##.","###########","#.#######.#","#.#.....#.#","...##.##..."],
+  ship: [".....#.....","....###....","....###....","###########","###########","###########","###########","##.......##"],
+};
+
+function sprite(rows, x, y, px, color) {
+  ctx.fillStyle = color;
+  for (let r = 0; r < rows.length; r++) {
+    for (let c = 0; c < rows[r].length; c++) {
+      if (rows[r][c] === "#") ctx.fillRect(x + c * px, y + r * px, px, px);
+    }
+  }
+}
+const spW = (rows, px) => rows[0].length * px;
+
+function centerText(text, cx, y, size, color, glow) {
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.font = `bold ${size}px "Yu Gothic UI", Meiryo, sans-serif`;
+  if (glow) {
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = size * 0.5;
+    ctx.fillStyle = color;
+    ctx.fillText(text, cx, y);
+    ctx.fillText(text, cx, y);
+    ctx.restore();
+  }
+  ctx.fillStyle = color;
+  ctx.fillText(text, cx, y);
+}
+
+function badge(text, cx, y, size) {
+  ctx.font = `bold ${size}px "Yu Gothic UI", Meiryo, sans-serif`;
+  const w = ctx.measureText(text).width + size * 1.4;
+  const h = size * 1.7;
+  ctx.fillStyle = C.yellow;
+  ctx.fillRect(cx - w / 2, y, w, h);
+  ctx.fillStyle = C.ink;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, cx, y + h / 2 + 1);
+  return h;
+}
+
+function render() {
+  const { w: W, h: H, layout } = current;
+  cv.width = W; cv.height = H;
+  const cx = W / 2;
+
+  ctx.fillStyle = C.ink;
+  ctx.fillRect(0, 0, W, H);
+
+  // 緑のグロー
+  const gr = ctx.createRadialGradient(cx, H * 0.30, 0, cx, H * 0.30, W * 0.55);
+  gr.addColorStop(0, "rgba(20,120,60,0.45)");
+  gr.addColorStop(1, "rgba(5,6,10,0)");
+  ctx.fillStyle = gr;
+  ctx.fillRect(0, 0, W, H);
+
+  // 星
+  let seed = 84;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  ctx.fillStyle = "rgba(255,255,255,0.16)";
+  for (let i = 0; i < 140; i++) {
+    ctx.fillRect(rnd() * W, rnd() * H, 1 + rnd() * 2, 1 + rnd() * 2);
+  }
+
+  const P = layout === "portrait"
+    ? { px: 12, rowY: H * 0.15, titleY: H * 0.29, titleSz: 118, subY: H * 0.415, subSz: 54,
+        badgeY: H * 0.50, badgeSz: 46, shipY: H * 0.62, shipPx: 14, urlY: H * 0.76, urlSz: 40,
+        footY: H * 0.86, footSz: 42, showFoot: true }
+    : { px: Math.round(H / 90), rowY: H * 0.11, titleY: H * 0.30, titleSz: H * 0.155,
+        subY: H * 0.520, subSz: H * 0.062, badgeY: H * 0.620, badgeSz: H * 0.050,
+        shipY: H * 0.800, shipPx: Math.round(H / 80), urlY: H * 0.930, urlSz: H * 0.040,
+        footY: 0, footSz: 0, showFoot: false };
+
+  // インベーダー3体
+  const w1 = spW(SP.octo, P.px), w2 = spW(SP.squid, P.px), w3 = spW(SP.crab, P.px);
+  const gap = P.px * 5;
+  let sx = cx - (w1 + w2 + w3 + gap * 2) / 2;
+  sprite(SP.octo, sx, P.rowY, P.px, C.pink);   sx += w1 + gap;
+  sprite(SP.squid, sx, P.rowY, P.px, C.blue);  sx += w2 + gap;
+  sprite(SP.crab, sx, P.rowY, P.px, C.green);
+
+  centerText(val("t1"), cx, P.titleY, P.titleSz, C.greenD, true);
+
+  ctx.font = `${P.subSz}px "Yu Gothic UI", Meiryo, sans-serif`;
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  ctx.fillStyle = C.gray;
+  ctx.fillText(val("t2"), cx, P.subY);
+
+  badge(val("t3"), cx, P.badgeY, P.badgeSz);
+
+  // 自機と弾
+  const shipX = cx - spW(SP.ship, P.shipPx) / 2;
+  sprite(SP.ship, shipX, P.shipY, P.shipPx, C.green);
+  ctx.fillStyle = "#ffffff";
+  for (let i = 1; i <= 3; i++) {
+    ctx.fillRect(cx - P.shipPx / 2, P.shipY - i * P.shipPx * 3.2, P.shipPx, P.shipPx * 2);
+  }
+
+  ctx.font = `${P.urlSz}px "Yu Gothic UI", Meiryo, sans-serif`;
+  ctx.fillStyle = C.yellow;
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  ctx.fillText(val("t4"), cx, P.urlY);
+
+  if (P.showFoot) centerText(val("t5"), cx, P.footY, P.footSz, C.greenD, true);
+
+  ctx.strokeStyle = "#1d4d2b";
+  ctx.lineWidth = Math.max(3, H / 200);
+  ctx.strokeRect(ctx.lineWidth / 2, ctx.lineWidth / 2, W - ctx.lineWidth, H - ctx.lineWidth);
+}
+
+const val = (id) => document.getElementById(id).value;
+
+// サイズ切替ボタン
+const sizesEl = document.getElementById("sizes");
+SIZES.forEach((s) => {
+  const b = document.createElement("button");
+  b.textContent = s.label;
+  b.dataset.key = s.key;
+  b.addEventListener("click", () => {
+    current = s;
+    [...sizesEl.children].forEach(c => c.classList.toggle("on", c.dataset.key === s.key));
+    render();
+  });
+  sizesEl.appendChild(b);
+});
+sizesEl.firstChild.classList.add("on");
+
+["t1", "t2", "t3", "t4", "t5"].forEach(id => {
+  document.getElementById(id).addEventListener("input", render);
+});
+
+document.getElementById("dl").addEventListener("click", () => {
+  const a = document.createElement("a");
+  a.download = current.file;
+  a.href = cv.toDataURL("image/png");
+  a.click();
+});
+
+render();
+})();
+</script>
+</body>
+</html>
