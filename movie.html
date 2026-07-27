@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>動画の自動生成 ｜ レトロインベーダー84</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 22px;
+    background: #0b0f10; color: #cdebd4;
+    font-family: "Yu Gothic UI", Meiryo, system-ui, sans-serif;
+  }
+  h1 { font-size: 19px; letter-spacing: 2px; color: #6cff8e; margin: 0 0 6px; }
+  p.lead { font-size: 13px; color: #7d9c86; margin: 0 0 18px; line-height: 1.9; }
+  .panel { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+
+  .controls {
+    flex: 0 0 330px;
+    background: #10221a; border: 1px solid #2c6b3f; border-radius: 8px;
+    padding: 16px; display: flex; flex-direction: column; gap: 14px;
+  }
+  label { font-size: 12px; color: #9cc4a7; display: block; margin-bottom: 6px; }
+  .modes { display: flex; gap: 8px; }
+  .modes button {
+    flex: 1; padding: 9px 6px;
+    background: #05100b; color: #cdebd4;
+    border: 1px solid #2c6b3f; border-radius: 4px;
+    font: inherit; font-size: 12px; cursor: pointer;
+  }
+  .modes button.on { background: #6cff8e; color: #05060a; border-color: #6cff8e; font-weight: bold; }
+
+  button.go {
+    padding: 13px; font: inherit; font-size: 15px; font-weight: bold;
+    border: none; border-radius: 4px; cursor: pointer;
+  }
+  button.go.main { background: #ffe066; color: #05060a; }
+  button.go.test { background: #05100b; color: #cdebd4; border: 1px solid #2c6b3f; font-weight: normal; font-size: 13px; }
+  button.go:disabled { opacity: .45; cursor: not-allowed; }
+  button.go.main:hover:not(:disabled) { background: #fff0a0; }
+
+  #bar { height: 8px; background: #05100b; border: 1px solid #2c6b3f; border-radius: 4px; overflow: hidden; }
+  #barfill { height: 100%; width: 0%; background: #6cff8e; transition: width .2s linear; }
+  #status { font-size: 12px; color: #9cc4a7; line-height: 1.8; min-height: 3.6em; }
+
+  .warn {
+    font-size: 11px; line-height: 1.9;
+    background: #2a1f05; border: 1px solid #6b5310; border-radius: 4px;
+    padding: 10px; color: #ffe066;
+  }
+
+  .preview { flex: 1 1 520px; min-width: 320px; }
+  #out { width: 100%; height: auto; max-height: 74vh; object-fit: contain; background: #000; border: 1px solid #2c6b3f; border-radius: 6px; }
+
+  /* 録画元のゲーム画面。ブラウザーが描画を止めないよう、画面内に置いたまま小さく表示する */
+  .source { margin-top: 14px; }
+  .source .cap { font-size: 11px; color: #5f7d68; margin-bottom: 6px; }
+  .srcbox { width: 208px; height: 234px; overflow: hidden; border: 1px solid #1d4d2b; border-radius: 4px; opacity: .55; }
+  .srcbox iframe { width: 640px; height: 720px; border: 0; transform: scale(0.325); transform-origin: top left; }
+</style>
+</head>
+<body>
+
+<h1>動画の自動生成</h1>
+<p class="lead">
+  ボタンを押すと、ゲームが自動でプレイされ、<strong>テロップまで入った完成品の動画ファイル</strong>が保存されます。<br>
+  画面録画ソフトも動画編集ソフトも要りません。保存された <code>.webm</code> はそのまま YouTube にアップロードできます。
+</p>
+
+<div class="panel">
+  <div class="controls">
+    <div>
+      <label>動画の形式</label>
+      <div class="modes" id="modes"></div>
+    </div>
+
+    <div class="warn" id="warn">
+      録画中は<strong>このタブを最前面に表示したまま</strong>にしてください。<br>
+      他のタブに切り替えると、ブラウザーが描画を止めてしまい映像が飛びます。<br>
+      音を入れるため、最初に1回どこかをクリックしてください。
+    </div>
+
+    <button class="go test" id="btnTest">まずテスト録画（15秒）</button>
+    <button class="go main" id="btnRec">本番の録画をはじめる</button>
+
+    <div>
+      <div id="bar"><div id="barfill"></div></div>
+    </div>
+    <div id="status">待機中です。</div>
+
+    <div class="source">
+      <div class="cap">録画元のゲーム画面（このまま置いておいてください）</div>
+      <div class="srcbox"><iframe id="game" src="index.html?demo=1&rec=1&crt=1" title="録画元"></iframe></div>
+    </div>
+  </div>
+
+  <div class="preview">
+    <canvas id="out" width="1280" height="720"></canvas>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+const PARAMS   = new URLSearchParams(location.search);
+const PLAY_URL = "yhdog0425-eng.github.io/retro-invaders-84/";
+
+/* ===== 出力設定と構成台本 ===== */
+const MODES = {
+  wide: {
+    label: "通常動画 1280×720", w: 1280, h: 720, file: "retro-invaders-84.webm", dur: 150,
+    scenes: [
+      { t: 0,   d: 6,  kind: "title", main: "レトロインベーダー84", sub: "ブラウザーで、あの頃へ。" },
+      { t: 6,   d: 8,  kind: "quote", lines: ["1978年、駄菓子屋の店先に、", "その筐体はあった。"] },
+      { t: 14,  d: 16, kind: "telop", lines: ["移動は ← →", "発射は スペース"] },
+      { t: 30,  d: 40, kind: "play" },
+      { t: 70,  d: 15, kind: "telop", lines: ["ピンクのUFOは", "50〜300点"] },
+      { t: 85,  d: 30, kind: "telop", lines: ["シールドは、", "自分の弾でも削れる"] },
+      { t: 115, d: 20, kind: "telop", lines: ["レベルが上がるほど、", "速くなる"] },
+      { t: 135, d: 15, kind: "outro" },
+    ],
+  },
+  shorts: {
+    label: "ショート 1080×1920", w: 1080, h: 1920, file: "retro-invaders-84-shorts.webm", dur: 55,
+    scenes: [
+      { t: 0,  d: 3,  kind: "telop", lines: ["ブラウザーだけで遊べる"] },
+      { t: 3,  d: 5,  kind: "title", main: "レトロインベーダー84", sub: "インストール不要・無料" },
+      { t: 8,  d: 14, kind: "play" },
+      { t: 22, d: 10, kind: "telop", lines: ["UFOは 50〜300点"] },
+      { t: 32, d: 13, kind: "play" },
+      { t: 45, d: 10, kind: "outro" },
+    ],
+  },
+};
+let mode = MODES.wide;
+
+const C = { green: "#8dff9e", greenD: "#6cff8e", blue: "#7bd6ff", pink: "#ff6b8b", yellow: "#ffe066", ink: "#05060a", gray: "#9cc4a7" };
+
+const SP = {
+  octo:  [".....##.....","...######...","..########..",".##.####.##.","############","..###..###..",".##......##.","..##....##.."],
+  squid: ["....##....","...####...","..######..",".##.##.##.","..######..","....##....","...#..#...","..#....#.."],
+  crab:  ["..#.....#..","...#...#...","..#######..",".##.###.##.","###########","#.#######.#","#.#.....#.#","...##.##..."],
+};
+
+const out = document.getElementById("out");
+const ctx = out.getContext("2d");
+const gameFrame = document.getElementById("game");
+const statusEl = document.getElementById("status");
+const barfill = document.getElementById("barfill");
+const btnRec = document.getElementById("btnRec");
+const btnTest = document.getElementById("btnTest");
+
+let api = null;          // iframe 内の window.RI84
+let recording = false;
+let ufoTelopUntil = 0;   // UFO出現テロップの表示終了時刻（秒）
+let lastUfo = false;
+
+function say(msg) { statusEl.textContent = msg; }
+
+/* ===== 描画ヘルパ ===== */
+function sprite(rows, x, y, px, color) {
+  ctx.fillStyle = color;
+  for (let r = 0; r < rows.length; r++) {
+    for (let c = 0; c < rows[r].length; c++) {
+      if (rows[r][c] === "#") ctx.fillRect(x + c * px, y + r * px, px, px);
+    }
+  }
+}
+function text(str, x, y, size, color, align = "center", bold = true, glow = 0) {
+  ctx.font = `${bold ? "bold " : ""}${size}px "Yu Gothic UI", Meiryo, sans-serif`;
+  ctx.textAlign = align;
+  ctx.textBaseline = "middle";
+  if (glow) {
+    ctx.save();
+    ctx.shadowColor = color; ctx.shadowBlur = glow;
+    ctx.fillStyle = color;
+    ctx.fillText(str, x, y); ctx.fillText(str, x, y);
+    ctx.restore();
+  }
+  ctx.fillStyle = color;
+  ctx.fillText(str, x, y);
+}
+
+// ゲーム画面の配置。横は左寄せ＋右に説明パネル、縦は中央に大きく。
+function gameRect() {
+  const { w: W, h: H } = mode;
+  if (mode === MODES.shorts) {
+    // 下部はYouTubeのUI（いいね・コメント等）が重なるため、余白を大きめに残す
+    const gw = 900, s = gw / 640, gh = 720 * s;
+    return { x: (W - gw) / 2, y: 320, w: gw, h: gh };
+  }
+  const gh = H - 60, s = gh / 720, gw = 640 * s;
+  return { x: 44, y: 30, w: gw, h: gh };
+}
+
+function background() {
+  const { w: W, h: H } = mode;
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#0c1410"); g.addColorStop(0.5, "#05060a"); g.addColorStop(1, "#0a1210");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  // 側面の飾り（筐体のサイドアート風）
+  const r = gameRect();
+  if (mode === MODES.wide) {
+    const px = 5;
+    [SP.octo, SP.squid, SP.crab].forEach((s, i) => {
+      sprite(s, 8, 90 + i * 190, px, "rgba(60,120,80,0.22)");
+      sprite(s, W - 70, 150 + i * 190, px, "rgba(60,120,80,0.22)");
+    });
+  }
+  // 画面の枠
+  ctx.strokeStyle = "#1d4d2b";
+  ctx.lineWidth = Math.max(2, H / 300);
+  ctx.strokeRect(r.x - ctx.lineWidth, r.y - ctx.lineWidth, r.w + ctx.lineWidth * 2, r.h + ctx.lineWidth * 2);
+}
+
+function drawGame(alpha = 1) {
+  const src = api && api.canvas;
+  if (!src) return;
+  const r = gameRect();
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = false;
+  try { ctx.drawImage(src, r.x, r.y, r.w, r.h); } catch (e) { /* 初期化前は無視 */ }
+  ctx.restore();
+}
+
+// 説明パネル（横）／上下の帯（縦）。常に出しておく固定要素。
+function chrome() {
+  const { w: W, h: H } = mode;
+  if (mode === MODES.wide) {
+    const r = gameRect();
+    const px0 = r.x + r.w + 40;
+    const pw = W - px0 - 40;
+    const cx = px0 + pw / 2;
+    text("レトロインベーダー84", cx, 92, 44, C.greenD, "center", true, 22);
+    text("RETRO INVADERS 84", cx, 132, 17, "#4d6b55", "center", false);
+    // 下部のURL帯
+    ctx.fillStyle = C.greenD;
+    ctx.fillRect(px0, H - 132, pw, 54);
+    text(PLAY_URL, cx, H - 105, 21, C.ink, "center", true);
+    text("無料・インストール不要・登録不要", cx, H - 58, 18, C.gray, "center", false);
+  } else {
+    text("レトロインベーダー84", W / 2, 178, 76, C.greenD, "center", true, 30);
+    text("ブラウザーだけで遊べる・無料", W / 2, 252, 36, C.gray, "center", false);
+    ctx.fillStyle = C.greenD;
+    ctx.fillRect(80, 1500, W - 160, 92);
+    text(PLAY_URL, W / 2, 1546, 31, C.ink, "center", true);
+    text("▼ 概要欄のリンクから今すぐ ▼", W / 2, 1648, 36, C.yellow, "center", true);
+  }
+}
+
+// 横向きのとき、右パネルの中央にスコアとレベルを大きく出す
+function statsPanel() {
+  if (mode !== MODES.wide || !api) return;
+  const { w: W, h: H } = mode;
+  const r = gameRect();
+  const px0 = r.x + r.w + 40, cx = px0 + (W - px0 - 40) / 2;
+  text("SCORE", cx, H / 2 - 104, 21, "#4d6b55", "center", false);
+  text(String(api.score).padStart(5, "0"), cx, H / 2 - 44, 74, C.green, "center", true, 18);
+  text("LEVEL", cx, H / 2 + 44, 21, "#4d6b55", "center", false);
+  text(String(api.level), cx, H / 2 + 94, 52, C.blue, "center", true, 14);
+}
+
+// テロップ。横は右パネルの中央、縦は下寄り。
+function telop(lines, alpha) {
+  const { w: W, h: H } = mode;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  if (mode === MODES.wide) {
+    const r = gameRect();
+    const px0 = r.x + r.w + 40, pw = W - px0 - 40, cx = px0 + pw / 2;
+    const size = 40, lh = 62;
+    const top = H / 2 - ((lines.length - 1) * lh) / 2;
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillRect(px0, top - 62, pw, lines.length * lh + 62);
+    ctx.fillStyle = C.yellow;
+    ctx.fillRect(px0, top - 62, 6, lines.length * lh + 62);
+    lines.forEach((s, i) => text(s, cx, top + i * lh, size, C.yellow, "center", true, 14));
+  } else {
+    const size = 54, lh = 78;
+    const top = 1400 - ((lines.length - 1) * lh) / 2;
+    lines.forEach((s, i) => text(s, W / 2, top + i * lh, size, C.yellow, "center", true, 20));
+  }
+  ctx.restore();
+}
+
+function cardTitle(main, sub, alpha) {
+  const { w: W, h: H } = mode;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "rgba(2,4,6,0.90)";
+  ctx.fillRect(0, 0, W, H);
+  const px = mode === MODES.wide ? 8 : 12;
+  const ws = SP.octo[0].length * px, gap = px * 5;
+  let sx = W / 2 - (ws * 3 + gap * 2) / 2;
+  const sy = H / 2 - (mode === MODES.wide ? 170 : 320);
+  sprite(SP.octo, sx, sy, px, C.pink);  sx += ws + gap;
+  sprite(SP.squid, sx, sy, px, C.blue); sx += ws + gap;
+  sprite(SP.crab, sx, sy, px, C.green);
+  text(main, W / 2, H / 2, mode === MODES.wide ? 86 : 104, C.greenD, "center", true, 34);
+  text(sub, W / 2, H / 2 + (mode === MODES.wide ? 84 : 130), mode === MODES.wide ? 34 : 46, C.gray, "center", false);
+  ctx.restore();
+}
+
+function cardQuote(lines, alpha) {
+  const { w: W, h: H } = mode;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "rgba(2,4,6,0.90)";
+  ctx.fillRect(0, 0, W, H);
+  const size = mode === MODES.wide ? 46 : 58, lh = size * 1.7;
+  const top = H / 2 - ((lines.length - 1) * lh) / 2;
+  lines.forEach((s, i) => text(s, W / 2, top + i * lh, size, C.gray, "center", false, 0));
+  ctx.restore();
+}
+
+function cardOutro(alpha) {
+  const { w: W, h: H } = mode;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "rgba(2,4,6,0.93)";
+  ctx.fillRect(0, 0, W, H);
+  const big = mode === MODES.wide ? 54 : 66;
+  text("今すぐ、無料であそべます", W / 2, H / 2 - (mode === MODES.wide ? 110 : 180), big, C.greenD, "center", true, 26);
+  const bw = mode === MODES.wide ? W * 0.72 : W * 0.86;
+  const bh = mode === MODES.wide ? 84 : 110;
+  ctx.fillStyle = C.greenD;
+  ctx.fillRect(W / 2 - bw / 2, H / 2 - bh / 2, bw, bh);
+  text(PLAY_URL, W / 2, H / 2 + 2, mode === MODES.wide ? 32 : 34, C.ink, "center", true);
+  text("インストール不要・登録不要／PCもスマホもOK", W / 2, H / 2 + (mode === MODES.wide ? 110 : 170), mode === MODES.wide ? 26 : 34, C.gray, "center", false);
+  ctx.restore();
+}
+
+/* ===== 1フレーム分の合成 ===== */
+function sceneAt(sec) {
+  const list = mode.scenes;
+  for (const s of list) { if (sec >= s.t && sec < s.t + s.d) return s; }
+  return list[list.length - 1];
+}
+// 場面の切り替わりで軽くフェードさせる
+function fadeOf(sec, s) {
+  const inT = Math.min(0.6, s.d / 4), outT = Math.min(0.6, s.d / 4);
+  const local = sec - s.t;
+  if (local < inT) return local / inT;
+  if (local > s.d - outT) return Math.max(0, (s.d - local) / outT);
+  return 1;
+}
+
+function renderFrame(sec) {
+  background();
+  drawGame(1);
+  chrome();
+
+  const s = sceneAt(sec);
+  const a = fadeOf(sec, s);
+  if (s.kind === "play") statsPanel();
+  if (s.kind === "title") cardTitle(s.main, s.sub, a);
+  else if (s.kind === "quote") cardQuote(s.lines, a);
+  else if (s.kind === "outro") cardOutro(a);
+  else if (s.kind === "telop") telop(s.lines, a);
+
+  // UFOが出たら一度だけ短いテロップを足す（プレイ中の場面のみ）
+  if (api) {
+    const now = api.ufoAlive;
+    if (now && !lastUfo && s.kind === "play") ufoTelopUntil = sec + 3;
+    lastUfo = now;
+  }
+  if (sec < ufoTelopUntil && s.kind === "play") telop(["UFO 出現！"], Math.min(1, (ufoTelopUntil - sec)));
+}
+
+/* ===== 録画 ===== */
+function pickMime() {
+  const types = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+  return types.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || "";
+}
+
+function connectApi() {
+  try {
+    api = gameFrame.contentWindow.RI84 || null;
+  } catch (e) { api = null; }
+  return !!api;
+}
+
+// file:// で開くと、ブラウザーの制限で iframe の中を読めず録画できない。
+const IS_FILE = location.protocol === "file:";
+if (IS_FILE) {
+  const w = document.getElementById("warn");
+  w.innerHTML = '<strong>この開き方では録画できません。</strong><br>' +
+    'パソコン内のファイルを直接開くと、ブラウザーの安全機能でゲーム画面を読み取れません。<br><br>' +
+    '公開ページのほうを開いてください：<br>' +
+    '<a href="https://yhdog0425-eng.github.io/retro-invaders-84/movie.html" style="color:#8dff9e">' +
+    'https://yhdog0425-eng.github.io/retro-invaders-84/movie.html</a>';
+}
+
+async function record(seconds, filename) {
+  if (recording) return;
+  if (IS_FILE) { say("この開き方では録画できません。公開ページの movie.html を開いてください。"); return; }
+  if (!connectApi()) { say("ゲーム画面をまだ読み込み中です。数秒おいてもう一度押してください。"); return; }
+  const mime = pickMime();
+  if (!mime) { say("このブラウザーは録画に対応していません。Chrome か Edge でお試しください。"); return; }
+
+  recording = true;
+  btnRec.disabled = btnTest.disabled = true;
+  out.width = mode.w; out.height = mode.h;
+
+  // 音声を取り出す。クリックがまだの場合は無音のまま続行する。
+  let audioTracks = [];
+  try {
+    api.unlockAudio();
+    const iac = api.ac;
+    if (iac) {
+      if (iac.state === "suspended") await iac.resume();
+      const dest = iac.createMediaStreamDestination();
+      api.master.connect(dest);
+      audioTracks = dest.stream.getAudioTracks();
+    }
+  } catch (e) { /* 無音で続行 */ }
+
+  const stream = out.captureStream(60);
+  audioTracks.forEach(t => stream.addTrack(t));
+
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
+  const chunks = [];
+  rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+
+  const done = new Promise((resolve) => {
+    rec.onstop = () => resolve(new Blob(chunks, { type: mime }));
+  });
+
+  api.startGame(true);          // レベル1から始める
+  ufoTelopUntil = 0; lastUfo = false;
+  rec.start(1000);
+
+  const t0 = performance.now();
+  await new Promise((resolve) => {
+    const tick = () => {
+      const sec = (performance.now() - t0) / 1000;
+      if (sec >= seconds) { resolve(); return; }
+      renderFrame(sec);
+      const left = Math.ceil(seconds - sec);
+      barfill.style.width = (sec / seconds * 100).toFixed(1) + "%";
+      say(`録画中… 残り ${Math.floor(left / 60)}分${String(left % 60).padStart(2, "0")}秒\nこのタブを最前面のままにしてください。`);
+      requestAnimationFrame(tick);
+    };
+    tick();
+  });
+
+  rec.stop();
+  const blob = await done;
+  stream.getTracks().forEach(t => t.stop());
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+
+  barfill.style.width = "100%";
+  const mb = (blob.size / 1024 / 1024).toFixed(1);
+  say(`完成しました。${filename}（約 ${mb} MB）をダウンロードフォルダーに保存しました。\nこのファイルをそのまま YouTube にアップロードできます。`);
+  recording = false;
+  btnRec.disabled = btnTest.disabled = false;
+}
+
+/* ===== UI ===== */
+const modesEl = document.getElementById("modes");
+Object.entries(MODES).forEach(([key, m]) => {
+  const b = document.createElement("button");
+  b.textContent = m.label;
+  b.dataset.key = key;
+  b.addEventListener("click", () => {
+    if (recording) return;
+    mode = m;
+    [...modesEl.children].forEach(c => c.classList.toggle("on", c.dataset.key === key));
+    out.width = m.w; out.height = m.h;
+    connectApi();
+    renderFrame(0);
+    const mm = Math.floor(m.dur / 60), ss = m.dur % 60;
+    say(`${m.label}／長さ ${mm}分${String(ss).padStart(2, "0")}秒。「本番の録画をはじめる」を押すと、その時間ぶん実際に再生しながら録画します。`);
+  });
+  modesEl.appendChild(b);
+});
+modesEl.firstChild.classList.add("on");
+
+btnRec.addEventListener("click", () => record(mode.dur, mode.file));
+btnTest.addEventListener("click", () => record(15, "test-" + mode.file));
+
+// クリックで音声を有効化する
+document.addEventListener("pointerdown", () => { if (api) { try { api.unlockAudio(); } catch (e) {} } }, { once: false });
+
+gameFrame.addEventListener("load", () => {
+  connectApi();
+  renderFrame(0);
+  const m = mode, mm = Math.floor(m.dur / 60), ss = m.dur % 60;
+  say(`準備できました。${m.label}／長さ ${mm}分${String(ss).padStart(2, "0")}秒。\nまず「テスト録画（15秒）」で保存できるか確かめるのがおすすめです。`);
+
+  // 静止画の書き出し（レイアウト確認用）：?shot=1&at=40&mode=wide
+  if (PARAMS.get("shot") === "1") {
+    const mk = PARAMS.get("mode");
+    if (mk && MODES[mk]) { mode = MODES[mk]; out.width = mode.w; out.height = mode.h; }
+    const at = Number(PARAMS.get("at") || 40);
+    setTimeout(() => {
+      renderFrame(at);
+      const a = document.createElement("a");
+      a.download = `frame-${mode.w}x${mode.h}-t${at}.png`;
+      a.href = out.toDataURL("image/png");
+      document.body.appendChild(a); a.click(); a.remove();
+      say("静止画を書き出しました。");
+    }, 2500);
+    return;
+  }
+
+  // 自動実行（動作確認用）：?auto=1&sec=12&mode=shorts
+  if (PARAMS.get("auto") === "1") {
+    const mk = PARAMS.get("mode");
+    if (mk && MODES[mk]) { mode = MODES[mk]; out.width = mode.w; out.height = mode.h; }
+    const sec = Number(PARAMS.get("sec") || 12);
+    setTimeout(() => record(sec, "auto-" + mode.file), 800);
+  }
+});
+
+// プレビューを常時更新（録画していないときも様子が見える）
+(function idle() {
+  if (!recording) { if (connectApi()) renderFrame(0.01); }
+  requestAnimationFrame(idle);
+})();
+})();
+</script>
+</body>
+</html>
