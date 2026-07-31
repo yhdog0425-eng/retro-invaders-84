@@ -6,6 +6,9 @@
 
 `https://yhdog0425-eng.github.io/retro-invaders-84/`
 
+ほかの作品もまとめた入口ページ → **https://yhdog0425-eng.github.io**
+（YouTubeの説明欄はURLを約41文字で打ち切るため、人に案内するときはこちらの短いURLを使ってください）
+
 ![レトロインベーダー84](ogp.png)
 
 ---

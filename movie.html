@@ -104,7 +104,9 @@
 "use strict";
 
 const PARAMS   = new URLSearchParams(location.search);
-const PLAY_URL = "yhdog0425-eng.github.io/retro-invaders-84/";
+// 動画に焼き込むURL。YouTubeの説明欄は約41文字で打ち切られるため、
+// 31文字で収まるハブページのURLを使う（そこから各ゲームへ行ける）。
+const PLAY_URL = "yhdog0425-eng.github.io";
 
 /* ===== 出力設定と構成台本 ===== */
 const MODES = {

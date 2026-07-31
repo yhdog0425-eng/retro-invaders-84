@@ -98,7 +98,8 @@
   }
   #overlay p { margin: 0; font-size: clamp(12px, 2.6vw, 15px); line-height: 1.9; color: #b6d8bd; }
   #overlay .key { color: #ffe066; }
-  #overlay .url { font-size: 11px; color: #4d6b55; letter-spacing: 0.5px; word-break: break-all; }
+  #overlay .url { font-size: 11px; color: #4d6b55; letter-spacing: 0.5px; word-break: break-all; text-decoration: none; }
+  #overlay .url:hover { color: #8dff9e; }
   button.btn {
     margin-top: 6px; padding: 12px 28px;
     font: inherit; font-size: 16px; letter-spacing: 2px;
@@ -135,7 +136,7 @@
         <h1 id="ov-title">RETRO INVADERS 84</h1>
         <p id="ov-text"></p>
         <button class="btn" id="ov-btn">PUSH 1P START</button>
-        <p class="url">https://yhdog0425-eng.github.io/retro-invaders-84/</p>
+        <a class="url" href="https://yhdog0425-eng.github.io">ほかのゲームもあります → yhdog0425-eng.github.io</a>
       </div>
     </div>
     <div id="panelbar">
@@ -158,7 +159,7 @@
 
 const PARAMS   = new URLSearchParams(location.search);
 const REC_MODE = PARAMS.get("rec") === "1";
-const PLAY_URL = "https://yhdog0425-eng.github.io/retro-invaders-84/";
+const HUB_URL  = "https://yhdog0425-eng.github.io";
 if (REC_MODE) document.body.classList.add("rec");
 
 const cv  = document.getElementById("cv");
@@ -658,7 +659,7 @@ function gameOver() {
   showOverlay("GAME OVER",
     `スコア <span class="key">${score}</span> ／ ハイスコア <span class="key">${hiScore}</span><br>` +
     `到達レベル <span class="key">${level}</span><br><br>` +
-    `面白かったら友だちにもURLをシェアしてください`,
+    `ほかのゲームは <a class="key" href="${HUB_URL}">yhdog0425-eng.github.io</a>`,
     "もう一度あそぶ");
 }
 
