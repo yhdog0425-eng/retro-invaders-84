@@ -136,7 +136,7 @@
         <h1 id="ov-title">RETRO INVADERS 84</h1>
         <p id="ov-text"></p>
         <button class="btn" id="ov-btn">PUSH 1P START</button>
-        <a class="url" href="https://yhdog0425-eng.github.io">ほかのゲームもあります → yhdog0425-eng.github.io</a>
+        <a class="url" href="https://www.youtube.com/@takaya5372" target="_blank" rel="noopener">ほかのゲームは YouTube で公開しています ▶</a>
       </div>
     </div>
     <div id="panelbar">
@@ -159,7 +159,9 @@
 
 const PARAMS   = new URLSearchParams(location.search);
 const REC_MODE = PARAMS.get("rec") === "1";
-const HUB_URL  = "https://yhdog0425-eng.github.io";
+// 他のゲームはサイト内でつなげず、YouTubeチャンネルへ戻す。
+// そうすることで、どのゲームも必ず自分の紹介動画を経由してもらえる。
+const CHANNEL_URL = "https://www.youtube.com/@takaya5372";
 if (REC_MODE) document.body.classList.add("rec");
 
 const cv  = document.getElementById("cv");
@@ -659,7 +661,7 @@ function gameOver() {
   showOverlay("GAME OVER",
     `スコア <span class="key">${score}</span> ／ ハイスコア <span class="key">${hiScore}</span><br>` +
     `到達レベル <span class="key">${level}</span><br><br>` +
-    `ほかのゲームは <a class="key" href="${HUB_URL}">yhdog0425-eng.github.io</a>`,
+    `ほかのゲームは <a class="key" href="${CHANNEL_URL}" target="_blank" rel="noopener">YouTube で公開しています ▶</a>`,
     "もう一度あそぶ");
 }
 

@@ -105,8 +105,9 @@
 
 const PARAMS   = new URLSearchParams(location.search);
 // 動画に焼き込むURL。YouTubeの説明欄は約41文字で打ち切られるため、
-// 31文字で収まるハブページのURLを使う（そこから各ゲームへ行ける）。
-const PLAY_URL = "yhdog0425-eng.github.io";
+// このゲームへ直行できる短い別名URL（39文字）を使う。
+// 1動画＝1ゲームで、見た人をそのゲームへまっすぐ案内する。
+const PLAY_URL = "yhdog0425-eng.github.io/invader";
 
 /* ===== 出力設定と構成台本 ===== */
 const MODES = {
