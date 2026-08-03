@@ -109,30 +109,41 @@ const PARAMS   = new URLSearchParams(location.search);
 // 1動画＝1ゲームで、見た人をそのゲームへまっすぐ案内する。
 const PLAY_URL = "yhdog0425-eng.github.io/invader";
 
-/* ===== 出力設定と構成台本 ===== */
+/* ===== 出力設定と構成台本 =====
+   主題は「AIと作った」であって、ゲームの紹介ではない。
+   ゲームは題材なので、遊び方の説明は最小限にとどめ、作った話に尺を回す。
+   映像では「AI」とだけ呼び、具体的なサービス名は概要欄に書く（映像を長く通用させるため）。 */
 const MODES = {
   wide: {
-    label: "通常動画 1280×720", w: 1280, h: 720, file: "retro-invaders-84.webm", dur: 150,
+    label: "通常動画 1280×720", w: 1280, h: 720, file: "retro-invaders-84.webm", dur: 180,
     scenes: [
-      { t: 0,   d: 6,  kind: "title", main: "レトロインベーダー84", sub: "ブラウザーで、あの頃へ。" },
-      { t: 6,   d: 8,  kind: "quote", lines: ["1978年、駄菓子屋の店先に、", "その筐体はあった。"] },
-      { t: 14,  d: 16, kind: "telop", lines: ["移動は ← →", "発射は スペース"] },
-      { t: 30,  d: 40, kind: "play" },
-      { t: 70,  d: 15, kind: "telop", lines: ["ピンクのUFOは", "50〜300点"] },
-      { t: 85,  d: 30, kind: "telop", lines: ["シールドは、", "自分の弾でも削れる"] },
-      { t: 115, d: 20, kind: "telop", lines: ["レベルが上がるほど、", "速くなる"] },
-      { t: 135, d: 15, kind: "outro" },
+      { t: 0,   d: 8,  kind: "hook",  lines: ["このゲーム、AIと作りました。"] },
+      { t: 8,   d: 10, kind: "quote", lines: ["50代。プログラムは書けません。", "それでも、作りたいものがありました。"] },
+      { t: 18,  d: 12, kind: "quote", lines: ["子どもの頃、駄菓子屋の店先に", "あの筐体がありました。", "同じ頃に生まれた友人に、", "もう一度見せたくて。"] },
+      { t: 30,  d: 8,  kind: "title", main: "レトロインベーダー84", sub: "ブラウザーで、あの頃へ。" },
+      { t: 38,  d: 14, kind: "telop", lines: ["移動は ← →", "発射は スペース"] },
+      { t: 52,  d: 38, kind: "play" },
+      { t: 90,  d: 15, kind: "telop", lines: ["ドット絵も 効果音も", "ぜんぶ手作り"] },
+      { t: 105, d: 15, kind: "telop", lines: ["ブラウン管の走査線まで", "再現しました"] },
+      { t: 120, d: 15, kind: "telop", lines: ["この動画も", "ブラウザーが書き出しています"] },
+      { t: 135, d: 25, kind: "message", lines: [
+          "道具は、誰でも使えるようになりました。",
+          "何を作りたいか。",
+          "おかしいと気づくこと。",
+          "それは、いまも人の側にあります。"] },
+      { t: 160, d: 20, kind: "outro" },
     ],
   },
   shorts: {
     label: "ショート 1080×1920", w: 1080, h: 1920, file: "retro-invaders-84-shorts.webm", dur: 55,
     scenes: [
-      { t: 0,  d: 3,  kind: "telop", lines: ["ブラウザーだけで遊べる"] },
-      { t: 3,  d: 5,  kind: "title", main: "レトロインベーダー84", sub: "インストール不要・無料" },
-      { t: 8,  d: 14, kind: "play" },
-      { t: 22, d: 10, kind: "telop", lines: ["UFOは 50〜300点"] },
-      { t: 32, d: 13, kind: "play" },
-      { t: 45, d: 10, kind: "outro" },
+      { t: 0,  d: 4,  kind: "hook",  lines: ["このゲーム、", "AIと作りました。"] },
+      { t: 4,  d: 6,  kind: "quote", lines: ["50代。", "プログラムは書けません。"] },
+      { t: 10, d: 14, kind: "play" },
+      { t: 24, d: 7,  kind: "telop", lines: ["ドット絵も効果音も", "ぜんぶ手作り"] },
+      { t: 31, d: 10, kind: "play" },
+      { t: 41, d: 7,  kind: "message", lines: ["道具は、誰でも", "使えるようになりました。"] },
+      { t: 48, d: 7,  kind: "outro" },
     ],
   },
 };
@@ -320,6 +331,45 @@ function cardQuote(lines, alpha) {
   ctx.restore();
 }
 
+// 冒頭のつかみ。全画面の暗幕に、一番大きな文字で一文だけ。
+function cardHook(lines, alpha) {
+  const { w: W, h: H } = mode;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "rgba(2,4,6,0.93)";
+  ctx.fillRect(0, 0, W, H);
+  const size = mode === MODES.wide ? 66 : 82, lh = size * 1.6;
+  const top = H / 2 - ((lines.length - 1) * lh) / 2;
+  lines.forEach((s, i) => text(s, W / 2, top + i * lh, size, C.greenD, "center", true, 30));
+  ctx.restore();
+}
+
+// 締めのメッセージ。1行ずつ順に浮かび上がらせて、ここだけ間を持たせる。
+function cardMessage(lines, sec, s, alpha) {
+  const { w: W, h: H } = mode;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "rgba(2,4,6,0.94)";
+  ctx.fillRect(0, 0, W, H);
+
+  const size = mode === MODES.wide ? 40 : 50, lh = size * 2.0;
+  const top = H / 2 - ((lines.length - 1) * lh) / 2;
+  // 場面の前半を使って、行を順に出す
+  const step = (s.d * 0.55) / lines.length;
+  lines.forEach((line, i) => {
+    const appear = 0.6 + i * step;              // この行が出はじめる秒
+    const local = (sec - s.t) - appear;
+    if (local < 0) return;
+    ctx.save();
+    ctx.globalAlpha = alpha * Math.min(1, local / 0.7);
+    // 最後の1行だけ色を変えて、結論だと分かるようにする
+    const isLast = (i === lines.length - 1);
+    text(line, W / 2, top + i * lh, size, isLast ? C.yellow : C.gray, "center", isLast, isLast ? 16 : 0);
+    ctx.restore();
+  });
+  ctx.restore();
+}
+
 function cardOutro(alpha) {
   const { w: W, h: H } = mode;
   ctx.save();
@@ -361,6 +411,8 @@ function renderFrame(sec) {
   const a = fadeOf(sec, s);
   if (s.kind === "play") statsPanel();
   if (s.kind === "title") cardTitle(s.main, s.sub, a);
+  else if (s.kind === "hook") cardHook(s.lines, a);
+  else if (s.kind === "message") cardMessage(s.lines, sec, s, a);
   else if (s.kind === "quote") cardQuote(s.lines, a);
   else if (s.kind === "outro") cardOutro(a);
   else if (s.kind === "telop") telop(s.lines, a);

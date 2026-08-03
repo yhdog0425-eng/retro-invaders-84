@@ -176,7 +176,7 @@ function New-Thumbnail {
         $shipPx  = 14
         $urlY    = [single]($Height * 0.76)
         $urlSz   = 40
-        $foot    = 'PC も スマホ も 無料であそべる'
+        $foot    = 'ブラウザーで無料であそべる'
         $footSz  = 42
         $footY   = [single]($Height * 0.86)
     } else {
@@ -208,19 +208,19 @@ function New-Thumbnail {
     Draw-Sprite $g $SP_SQUID ([single]($sx + $w1 + $gap)) $rowY $px $CBlue
     Draw-Sprite $g $SP_CRAB  ([single]($sx + $w1 + $gap + $w2 + $gap)) $rowY $px $CGreen
 
-    # --- タイトル ---
+    # --- タイトル（クリックの動機は「懐かしいゲーム」ではなく「AIと作った」）---
     $fTitle = Get-JpFont $titleSz
-    Draw-CenterText $g 'レトロインベーダー84' $cx $titleY $fTitle $CGreenD $CGreenD 6 | Out-Null
+    Draw-CenterText $g 'AIと作った' $cx $titleY $fTitle $CGreenD $CGreenD 6 | Out-Null
     $fTitle.Dispose()
 
     # --- サブタイトル ---
     $fSub = Get-JpFont $subSz ([System.Drawing.FontStyle]::Regular)
-    Draw-CenterText $g 'ブラウザーで遊べる無料シューティング' $cx $subY $fSub $CGray $CGreenD 0 | Out-Null
+    Draw-CenterText $g 'レトロインベーダー84' $cx $subY $fSub $CGray $CGreenD 0 | Out-Null
     $fSub.Dispose()
 
     # --- バッジ ---
     $fBadge = Get-JpFont $badgeSz
-    Draw-Badge $g 'インストール不要・登録不要' $cx $badgeY $fBadge $CYellow $CInk ([single]($badgeSz * 0.7)) ([single]($badgeSz * 0.28)) | Out-Null
+    Draw-Badge $g 'プログラム未経験・50代' $cx $badgeY $fBadge $CYellow $CInk ([single]($badgeSz * 0.7)) ([single]($badgeSz * 0.28)) | Out-Null
     $fBadge.Dispose()
 
     # --- 自機と弾 ---
@@ -235,7 +235,7 @@ function New-Thumbnail {
 
     # --- URL ---
     $fUrl = Get-JpFont $urlSz ([System.Drawing.FontStyle]::Regular)
-    Draw-CenterText $g 'yhdog0425-eng.github.io/retro-invaders-84/' $cx $urlY $fUrl $CYellow $CYellow 0 | Out-Null
+    Draw-CenterText $g 'yhdog0425-eng.github.io/invader' $cx $urlY $fUrl $CYellow $CYellow 0 | Out-Null
     $fUrl.Dispose()
 
     if ($foot) {
